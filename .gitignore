@@ -131,3 +131,6 @@ dist
 
 # Claude Code local settings (personal permissions, not shared)
 .claude/settings.local.json
+
+# Local machine setup scripts (personal environment, not shared)
+scripts/local/
