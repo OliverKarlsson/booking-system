@@ -1,20 +1,27 @@
-import { EmptyState } from '@/components/ui';
+import { Button } from '@/components/ui';
 import { PageHeader } from '@/components/layout';
+import { useBookingStore } from '@/store';
+import { RentalUnitList } from './RentalUnitList';
+import { RentalUnitFormModal } from './RentalUnitFormModal';
 
 /**
- * STUB — owned by T2.4 (rental unit management UI).
+ * The `/units` route. Mounted by `src/router.tsx`, which this file does not touch.
  *
- * Replace the body of this component. It is already mounted at `/units` in
- * `src/router.tsx`; do not edit the router.
+ * Deliberately thin: the page composes a header, the list container, and the dialog. All
+ * fetching lives in `RentalUnitList`, all form state in `RentalUnitFormModal`.
  */
 export function RentalUnitsPage() {
+  const openModal = useBookingStore((state) => state.openModal);
+
   return (
     <>
-      <PageHeader title="Rental units" description="The properties available to book." />
-      <EmptyState
-        title="Rental units not built yet"
-        description="This page is a Wave 1 stub. T2.4 fills it in with the unit list and create form."
+      <PageHeader
+        title="Rental units"
+        description="The properties available to book."
+        actions={<Button onClick={() => openModal('createRentalUnit')}>New rental unit</Button>}
       />
+      <RentalUnitList />
+      <RentalUnitFormModal />
     </>
   );
 }

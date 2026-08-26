@@ -2,11 +2,24 @@ import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { RouterProvider, createMemoryRouter } from 'react-router-dom';
 import { describe, expect, it } from 'vitest';
+import { QueryProvider } from './lib/QueryProvider';
+import { createQueryClient } from './lib/queryClient';
 import { routes } from './router';
 
+/**
+ * The provider is not optional here. Once a page actually fetches, rendering it without
+ * a QueryClient throws "No QueryClient set", the router's errorElement swallows it, and
+ * these assertions fail against an error page rather than the route they name — a
+ * failure that looks like a routing bug but isn't. A fresh client per render keeps
+ * cached data from leaking between cases.
+ */
 function renderAt(initialPath: string) {
   const router = createMemoryRouter(routes, { initialEntries: [initialPath] });
-  return render(<RouterProvider router={router} />);
+  return render(
+    <QueryProvider client={createQueryClient()}>
+      <RouterProvider router={router} />
+    </QueryProvider>,
+  );
 }
 
 /**
