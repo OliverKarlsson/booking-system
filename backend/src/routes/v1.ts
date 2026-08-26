@@ -3,6 +3,7 @@ import { Router } from 'express';
 import { dashboardRouter } from '../modules/dashboard/dashboard.routes';
 import { rentalUnitsRouter } from '../modules/rentalUnits/rentalUnits.routes';
 import { reservationsRouter } from '../modules/reservations/reservations.routes';
+import { openapiRouter } from '../openapi/openapi.routes';
 
 /**
  * The `/v1` router.
@@ -24,6 +25,12 @@ export function createV1Router(): Router {
   router.use('/rental-units', rentalUnitsRouter);
   router.use('/reservations', reservationsRouter);
   router.use('/dashboard', dashboardRouter);
+
+  // No prefix: this router owns `/openapi.json` and `/docs` itself, neither of which
+  // collides with a resource prefix above. It must be mounted here rather than after
+  // createApp() returns, because app.ts registers notFoundHandler immediately after
+  // `/v1` — anything added later can never match.
+  router.use(openapiRouter);
 
   return router;
 }
