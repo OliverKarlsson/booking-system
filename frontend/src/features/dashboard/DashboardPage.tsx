@@ -1,15 +1,17 @@
-import { EmptyState } from '@/components/ui';
 import { PageHeader } from '@/components/layout';
+import { DashboardList } from './DashboardList';
 
 /**
- * STUB — owned by T3.1 (dashboard view).
+ * The `/` route — the application's landing page. Mounted by `src/router.tsx`, which this
+ * file does not touch.
  *
- * Replace the body of this component. It is already mounted at `/` in `src/router.tsx`;
- * do not edit the router.
+ * Deliberately thin: the page composes a header and the list container, and all fetching
+ * lives in `DashboardList`.
  *
- * Reminders from the contract: send no date (§3.6 — the server resolves "today" per unit
- * in that unit's own timezone), and render every date with `formatDate` from
- * `@/lib/formatDate` rather than constructing a `Date` (§3.7).
+ * The description says "each property's own local date" rather than "today" on purpose.
+ * Occupancy here is not evaluated against the viewer's clock at all — the server resolves
+ * the date per unit in that unit's timezone (§3.7), and every card prints the date it
+ * used.
  */
 export function DashboardPage() {
   return (
@@ -18,10 +20,7 @@ export function DashboardPage() {
         title="Dashboard"
         description="Occupancy for every rental unit, as of each property's own local date."
       />
-      <EmptyState
-        title="Dashboard not built yet"
-        description="This page is a Wave 1 stub. T3.1 fills it in with one card per rental unit."
-      />
+      <DashboardList />
     </>
   );
 }
