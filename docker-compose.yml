@@ -1,0 +1,56 @@
+# One-command startup for the stack: `docker compose up`.
+#
+# This replaces the scaffolded MongoDB compose file (see FAQ, "MongoDB or switch to a
+# relational database?"). The booking rule is an overlap *constraint*, and Postgres can
+# express it declaratively via `EXCLUDE USING gist`; Mongo cannot, so the same guarantee
+# would have to be reconstructed in application code. As a bonus the infrastructure got
+# simpler, not harder — Mongo transactions need a single-node replica set with an
+# automatic `rs.initiate()`, where Postgres needs an image and three env vars.
+
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: booking
+      POSTGRES_PASSWORD: booking
+      POSTGRES_DB: booking
+    ports:
+      # Published on 5433 so it does not collide with a Postgres already running on the
+      # developer's machine. Inside the compose network the API still talks to 5432.
+      - '5433:5432'
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      # `pg_isready` against the real user and database rather than a bare port probe:
+      # the official image briefly starts a throwaway server on a unix socket to run its
+      # init scripts, and a port-only check can go green against a server that is about
+      # to be shut down and restarted.
+      test: ['CMD-SHELL', 'pg_isready -U booking -d booking']
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 5s
+
+  api:
+    build:
+      # Build context is the repository root, not backend/: the API imports
+      # @booking/shared, which only resolves through the npm workspace link created at
+      # the root. A backend-only context cannot see that package.
+      context: .
+      dockerfile: backend/Dockerfile
+    environment:
+      NODE_ENV: production
+      PORT: 5006
+      DATABASE_URL: postgres://booking:booking@db:5432/booking
+      CORS_ORIGIN: http://localhost:5173
+    ports:
+      - '5006:5006'
+    depends_on:
+      db:
+        # The API runs its migration on boot, so it must not start until Postgres is
+        # genuinely accepting connections. `depends_on` without a condition only waits
+        # for the container to be *created*, which is the classic version of this bug.
+        condition: service_healthy
+
+volumes:
+  postgres-data:

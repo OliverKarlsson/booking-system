@@ -1,42 +1,65 @@
-import express from 'express';
-import process from 'process';
-import { MongoClient } from 'mongodb';
+import express, { type Express, type Request, type Response } from 'express';
 
-if (process.env.MONGO_URI === undefined) {
-  console.error("MONGO_URI environment variable is not set")
-  process.exit(1)
-}
+import { checkDatabase } from './db/pool';
+import { errorHandler, notFoundHandler } from './middleware/errorHandler';
+import { requestId } from './middleware/requestId';
+import { rateLimiter, securityMiddleware } from './middleware/security';
+import { createV1Router } from './routes/v1';
 
-// An express app you can use to mount routes on. Feel free to modify this,
-// and add any middlewares you think are necessary.
-const app = express();
-// A MongoDB client you can use to connect to the database.
-// No collections are setup by default
-const dbClient = new MongoClient(process.env.MONGO_URI);
+/**
+ * Builds the Express app without starting a server.
+ *
+ * Keeping construction separate from `listen()` (which lives in server.ts) is what lets
+ * integration tests drive the real app through supertest on an ephemeral port, with the
+ * same middleware stack the deployed process runs. A module that binds a port on import
+ * cannot be tested that way.
+ */
+export function createApp(): Express {
+  const app = express();
 
-async function start() {
-  try {
-    await dbClient.connect();
-    console.log("Connected to MongoDB");
-  } catch (err) {
-    console.error("Failed to connect to MongoDB");
-    console.error(err);
-    process.exit(1);
-  }
+  // helmet also removes this, but not before an error thrown earlier in the stack could
+  // have been served by Express's defaults.
+  app.disable('x-powered-by');
 
-  app.get('/', (req, res) => {
-    res.send('Hello World!\n');
+  // First, so that everything downstream — including the error log — has a correlation
+  // id to attach.
+  app.use(requestId);
+  app.use(...securityMiddleware());
+
+  // A hard body cap. Reservations and rental units are a few hundred bytes; anything
+  // approaching 100kB is a mistake or an attempt, and rejecting it at the parser is
+  // cheaper than at the validator.
+  app.use(express.json({ limit: '100kb' }));
+
+  /**
+   * Liveness/readiness.
+   *
+   * The check runs `SELECT 1` rather than just returning 200, because "the process is
+   * up" is not the question an orchestrator is asking. An API whose database is gone
+   * answers every real request with a 500 while a process-only health check reports
+   * healthy, so the container is never restarted and never pulled out of the load
+   * balancer — the check actively prevents the recovery it exists to trigger.
+   *
+   * Deliberately outside `/v1` and outside the §3.4 envelope: this is an infrastructure
+   * endpoint for Docker and orchestrators, not part of the client-facing API contract,
+   * so it is not versioned and its 503 body is a status document rather than an error.
+   */
+  app.get('/health', async (_req: Request, res: Response) => {
+    try {
+      await checkDatabase();
+      res.status(200).json({ status: 'ok', database: 'up' });
+    } catch {
+      res.status(503).json({ status: 'degraded', database: 'down' });
+    }
   });
 
-  app.listen(process.env.PORT, () => {
-    return console.log(`Express is listening at http://localhost:${process.env.PORT}`);
-  });
+  // Rate limiting covers /v1 only. Health checks fire on a fixed interval from the
+  // container runtime and must never be throttled — a 429 there reads as an unhealthy
+  // container and triggers a restart loop.
+  app.use('/v1', rateLimiter, createV1Router());
+
+  app.use(notFoundHandler);
+  app.use(errorHandler);
+
+  return app;
 }
-
-void start();
-
-process.on('SIGINT', () => {
-  console.info("Received SIGINT, closing application")
-  dbClient.close()
-  process.exit(0)
-})
