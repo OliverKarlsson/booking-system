@@ -1,25 +1,31 @@
-import { EmptyState } from '@/components/ui';
+import { Button } from '@/components/ui';
 import { PageHeader } from '@/components/layout';
+import { useBookingStore } from '@/store';
+import { CancelReservationDialog } from './CancelReservationDialog';
+import { ReservationFormModal } from './ReservationFormModal';
+import { ReservationList } from './ReservationList';
 
 /**
- * STUB — owned by T3.2 (reservation management UI + conflict UX).
+ * The `/reservations` route. Mounted by `src/router.tsx`, which this file does not touch.
  *
- * Replace the body of this component. It is already mounted at `/reservations` in
- * `src/router.tsx`; do not edit the router.
- *
- * The conflict path is the point of this screen: on a 409, use `isBookingConflict` from
- * `@/lib/apiClient` to narrow the error, then render a message naming the conflicting
- * guest and dates — `formatDateRange` in `@/lib/formatDate` produces "12–15 March 2026".
- * Show it on the form, not in a toast.
+ * Deliberately thin: the page composes a header, the list container, and the two dialogs.
+ * All fetching lives in `ReservationList`, all form state in `ReservationFormModal`, and
+ * the dialogs render nothing at all until `uiSlice` says they are open — which is why
+ * mounting them here costs a null check rather than a fetch.
  */
 export function ReservationsPage() {
+  const openModal = useBookingStore((state) => state.openModal);
+
   return (
     <>
-      <PageHeader title="Reservations" description="Bookings across every rental unit." />
-      <EmptyState
-        title="Reservations not built yet"
-        description="This page is a Wave 1 stub. T3.2 fills it in with the filtered list, forms, and conflict handling."
+      <PageHeader
+        title="Reservations"
+        description="Bookings across every rental unit."
+        actions={<Button onClick={() => openModal('createReservation')}>New reservation</Button>}
       />
+      <ReservationList />
+      <ReservationFormModal />
+      <CancelReservationDialog />
     </>
   );
 }
