@@ -9,9 +9,9 @@
     "build": "tsc -p tsconfig.build.json && node scripts/copy-assets.mjs",
     "start": "node dist/server.js",
     "typecheck": "tsc --noEmit",
-    "test": "vitest run",
+    "test": "vitest run --no-file-parallelism",
     "test:unit": "vitest run --project unit",
-    "test:integration": "vitest run --project integration",
+    "test:integration": "vitest run --project integration --no-file-parallelism",
     "test:watch": "vitest"
   },
   "author": "Minut",

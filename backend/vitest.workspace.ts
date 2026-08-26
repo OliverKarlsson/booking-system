@@ -43,9 +43,17 @@ export default defineWorkspace([
       include: [INTEGRATION_GLOB],
       setupFiles: ['src/test/setup.integration.ts'],
       // One database, and `truncateAll` wipes it between tests — two test files running
-      // concurrently would delete each other's fixtures mid-assertion. Serialising files
-      // is the cheap correct answer at this suite size; the scalable one is a schema per
-      // worker.
+      // concurrently delete each other's fixtures mid-assertion (observed as deadlocks,
+      // FK violations, and length assertions seeing another file's rows).
+      //
+      // NOTE: `fileParallelism` is a ROOT-level option in Vitest 2 and is NOT honoured
+      // here inside a workspace project — it is kept for intent, but the setting that
+      // actually takes effect is `--no-file-parallelism` in the `test:integration` and
+      // `test` scripts. Run integration tests via those scripts, not a bare
+      // `vitest run --project integration`, or they will race.
+      //
+      // Serialising files is the cheap correct answer at this suite size; the scalable
+      // one is a schema (or database) per worker, which would let this run in parallel.
       fileParallelism: false,
       testTimeout: 30_000,
       hookTimeout: 30_000,
