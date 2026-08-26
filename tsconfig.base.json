@@ -1,0 +1,32 @@
+{
+  "$schema": "https://json.schemastore.org/tsconfig",
+  "compilerOptions": {
+    /*
+     * Shared compiler settings for every workspace.
+     *
+     * Deliberately omits `module`, `moduleResolution`, `lib`, and `jsx`: the backend
+     * compiles to CommonJS for Node while the frontend is bundled as ESM with DOM
+     * types. Pinning either here would force one workspace to fight the base config,
+     * so each workspace declares its own module/runtime story and inherits only the
+     * settings that are genuinely universal.
+     *
+     * `target: ES2022` is the floor rather than a preference: `Intl.supportedValuesOf`
+     * (used to validate IANA timezone ids in @booking/shared) is only typed from the
+     * ES2022 libs onward.
+     */
+    "target": "ES2022",
+    "strict": true,
+    "esModuleInterop": true,
+    "allowSyntheticDefaultImports": true,
+    "forceConsistentCasingInFileNames": true,
+    "resolveJsonModule": true,
+    "declaration": true,
+    "declarationMap": true,
+    "sourceMap": true,
+    /*
+     * Type-checking a dependency's .d.ts files buys us nothing here and costs seconds
+     * on every run; our own sources are still fully checked.
+     */
+    "skipLibCheck": true
+  }
+}

@@ -134,3 +134,13 @@ dist
 
 # Local machine setup scripts (personal environment, not shared)
 scripts/local/
+
+# Workspace build output (@booking/shared is compiled to dist/ on `npm install`)
+shared/dist/
+backend/dist/
+frontend/dist/
+
+# Vitest / Vite caches
+.vitest/
+.vite/
+node_modules/.vite/

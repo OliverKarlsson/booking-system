@@ -1,0 +1,21 @@
+{
+  "name": "minut-booking-system",
+  "version": "1.0.0",
+  "description": "Booking system — npm workspace root (shared contract, API, web client)",
+  "private": true,
+  "license": "ISC",
+  "workspaces": [
+    "shared",
+    "backend",
+    "frontend"
+  ],
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "build": "npm run build --workspaces --if-present",
+    "typecheck": "npm run typecheck --workspaces --if-present",
+    "test": "npm run test --workspaces --if-present",
+    "build:shared": "npm run build --workspace @booking/shared"
+  }
+}

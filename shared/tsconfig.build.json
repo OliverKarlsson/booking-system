@@ -1,0 +1,13 @@
+{
+  /*
+   * Emit config: identical to tsconfig.json but with the tests excluded, so `dist`
+   * contains only the contract itself. `tsconfig.json` (which includes the tests) is
+   * what `npm run typecheck` uses, so test files are still type-checked.
+   */
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "types": []
+  },
+  "include": ["src/**/*.ts"],
+  "exclude": ["src/**/*.test.ts"]
+}

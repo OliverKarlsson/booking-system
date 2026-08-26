@@ -1,0 +1,21 @@
+{
+  "extends": "../tsconfig.base.json",
+  "compilerOptions": {
+    /*
+     * CommonJS output because the backend is CommonJS; bundlers (Vite/esbuild) consume
+     * CJS dependencies without complaint, so one build serves both consumers and we
+     * avoid maintaining a dual ESM/CJS package for four hundred lines of schemas.
+     */
+    "module": "commonjs",
+    "moduleResolution": "node",
+    "lib": ["ES2022"],
+    "rootDir": "./src",
+    "outDir": "./dist",
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "noImplicitOverride": true,
+    "noFallthroughCasesInSwitch": true,
+    "types": ["vitest/globals"]
+  },
+  "include": ["src/**/*.ts"]
+}
