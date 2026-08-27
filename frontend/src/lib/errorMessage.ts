@@ -33,7 +33,20 @@ export function toErrorMessage(error: unknown, fallback = 'Something went wrong.
     const issues = error.details.map((issue) => `${issue.path}: ${issue.message}`).join('; ');
     return `${error.message} (${issues})`;
   }
-  if (isApiError(error)) return error.message;
+  if (isApiError(error)) {
+    // An unexpected server failure is the one case where the message alone is a dead end:
+    // it is deliberately generic, so there is nothing in it to act on. Appending the
+    // correlation id gives the user something to quote and support something to grep,
+    // which is the entire reason the opaque 500 body is acceptable.
+    //
+    // Only for INTERNAL_ERROR. A conflict or a validation failure already says exactly
+    // what is wrong, and an id bolted onto those would be noise suggesting a bug where
+    // the user simply picked dates that were taken.
+    if (error.code === 'INTERNAL_ERROR' && error.requestId) {
+      return `${error.message} (reference: ${error.requestId})`;
+    }
+    return error.message;
+  }
   if (error instanceof Error && error.message) return error.message;
   return fallback;
 }

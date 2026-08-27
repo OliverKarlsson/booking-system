@@ -46,12 +46,32 @@ export class ApiError extends Error {
   readonly code: ErrorCode;
   readonly details: unknown;
 
-  constructor(message: string, status: number, code: ErrorCode, details?: unknown) {
+  /**
+   * The server's `X-Request-Id` for the failed call, when the response carried one.
+   *
+   * A 500's body is deliberately opaque — no stack, no SQL, nothing a caller could act on
+   * — and this id is what makes that workable: the log holds the detail, the user holds
+   * the id, and support joins them. Dropping it here would leave a user with nothing to
+   * quote but "it broke".
+   *
+   * `undefined` cross-origin unless the API sends `Access-Control-Expose-Headers`, which
+   * it does; the browser hides unlisted headers from JavaScript rather than erroring.
+   */
+  readonly requestId?: string;
+
+  constructor(
+    message: string,
+    status: number,
+    code: ErrorCode,
+    details?: unknown,
+    requestId?: string,
+  ) {
     super(message);
     this.name = 'ApiError';
     this.status = status;
     this.code = code;
     this.details = details;
+    this.requestId = requestId;
     // Required for `instanceof` to survive TypeScript's ES5-class downlevelling.
     Object.setPrototypeOf(this, ApiError.prototype);
   }
@@ -193,6 +213,7 @@ async function request<T>(path: string, options: InternalRequestOptions): Promis
       // error middleware ran) is still an unexpected server failure.
       typeof envelope.code === 'string' ? (envelope.code as ErrorCode) : 'INTERNAL_ERROR',
       envelope.details,
+      response.headers.get('x-request-id') ?? undefined,
     );
   }
 

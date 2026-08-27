@@ -14,9 +14,37 @@ import { RateLimitedError } from '../errors/AppError';
  * FAQ), '*' would have to go: `credentials: true` and a wildcard origin are mutually
  * exclusive in the CORS spec precisely because that combination is the vulnerability.
  */
+/**
+ * Response headers a cross-origin client is allowed to read.
+ *
+ * Without this the browser hides them from JavaScript entirely. The CORS-safelisted
+ * response headers are only Cache-Control, Content-Language, Content-Length, Content-Type,
+ * Expires, Last-Modified and Pragma — everything else needs naming here, and a `fetch`
+ * against another origin silently returns `null` for the rest rather than erroring, so the
+ * omission looks like the server never sent them.
+ *
+ * That matters because the brief's API is meant to serve a web app *and* a mobile app:
+ *
+ *  - `X-Request-Id` is the whole point of the deliberately opaque 500 body. A client that
+ *    cannot read it has nothing to quote when reporting the failure.
+ *  - `Retry-After` and the `RateLimit-*` family are how a client backs off correctly
+ *    instead of hammering a 429 and guessing.
+ *
+ * Same-origin callers (the nginx proxy in compose, the Vite dev proxy) are unaffected —
+ * they see every header regardless. This is purely for a client on another origin.
+ */
+const EXPOSED_HEADERS = [
+  'X-Request-Id',
+  'Retry-After',
+  'RateLimit-Limit',
+  'RateLimit-Remaining',
+  'RateLimit-Reset',
+  'RateLimit-Policy',
+];
+
 function corsOptions(): cors.CorsOptions {
   if (env.CORS_ORIGIN.trim() === '*') {
-    return { origin: true, credentials: false };
+    return { origin: true, credentials: false, exposedHeaders: EXPOSED_HEADERS };
   }
 
   const allowed = env.CORS_ORIGIN.split(',')
@@ -26,6 +54,7 @@ function corsOptions(): cors.CorsOptions {
   return {
     origin: allowed,
     credentials: false,
+    exposedHeaders: EXPOSED_HEADERS,
   };
 }
 
