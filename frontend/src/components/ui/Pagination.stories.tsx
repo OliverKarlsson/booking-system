@@ -17,12 +17,20 @@ export const FirstPage: Story = {};
 export const MiddlePage: Story = { args: { page: 4 } };
 export const LastPage: Story = { args: { page: 7 } };
 
-/** A single page still reports the count; the controls are simply inert. */
+/**
+ * One page renders **nothing at all** — `totalPages <= 1` returns null.
+ *
+ * Controls for a list that cannot be paged are noise, and "Page 1 of 1" is a row of
+ * permanently disabled buttons. The canvas below is blank on purpose; that is the story.
+ */
 export const SinglePage: Story = { args: { page: 1, totalPages: 1, total: 6 } };
 
 /**
- * Empty is totalPages: 0, not 1 — a list with nothing in it has no pages rather than one
- * blank one, and the API's pagination envelope reports it that way.
+ * Also blank, for the same reason.
+ *
+ * Empty is `totalPages: 0`, not 1 — a list with nothing in it has no pages rather than one
+ * blank one, and the API's pagination envelope reports it that way. Either value lands on
+ * the same `<= 1` guard, so the empty list gets its EmptyState and no pager.
  */
 export const Empty: Story = { args: { page: 1, totalPages: 0, total: 0 } };
 

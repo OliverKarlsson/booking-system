@@ -74,13 +74,18 @@ export const SingleNightConflict: Story = {
 };
 
 /**
- * Nothing to show.
+ * An empty list — a state the app never actually reaches, shown here to document why.
  *
- * `isBookingConflict` validates the 409 payload at runtime, so a malformed or empty
- * `details` array falls through to the envelope's generic message rather than rendering
- * "undefined (undefined)". This story documents that this component stays silent in that
- * case instead of drawing an empty box — see Primitives/ErrorBanner for what the user
- * actually sees instead.
+ * The component does not guard against this; it renders its banner with an empty list, as
+ * the blank area below the heading shows. The guard lives at the call site instead:
+ * `isBookingConflict` validates the 409 payload at runtime, and a malformed or empty
+ * `details` falls through to the envelope's generic message — see
+ * Primitives/ErrorBanner → Unusable Conflict Payload for what the user gets in that case.
+ *
+ * Keeping the check there rather than here is deliberate: choosing *which* message to show
+ * is the form's decision, and a component that silently renders nothing is a component
+ * whose absence is hard to debug. But it does mean this one trusts its caller, which is
+ * worth knowing before reusing it somewhere that does not do the same validation.
  */
 export const NoConflicts: Story = {
   args: { conflicts: [] },

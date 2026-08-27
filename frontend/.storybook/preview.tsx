@@ -1,4 +1,5 @@
 import type { Preview } from '@storybook/react';
+import { MemoryRouter } from 'react-router-dom';
 
 // The app's own stylesheet, so stories render with the real Tailwind build and the same
 // base layer the app gets — including the shared focus-visible ring. A story that styled
@@ -6,6 +7,26 @@ import type { Preview } from '@storybook/react';
 import '../src/index.css';
 
 const preview: Preview = {
+  /**
+   * A router around every story.
+   *
+   * Presentational components are props-only, but "props-only" does not mean
+   * "context-free": DashboardUnitCard renders a `<Link>` to the unit's detail page, and
+   * react-router's hooks throw outside a Router — the story compiles and indexes fine and
+   * then fails at render.
+   *
+   * Applied globally rather than per-story so a component that grows a link later does not
+   * silently break its own stories. MemoryRouter keeps navigation in memory, so clicking a
+   * link inside a story is inert rather than reloading the Storybook shell.
+   */
+  decorators: [
+    (Story) => (
+      <MemoryRouter>
+        <Story />
+      </MemoryRouter>
+    ),
+  ],
+
   parameters: {
     controls: {
       matchers: { color: /(background|color)$/i, date: /Date$/i },
