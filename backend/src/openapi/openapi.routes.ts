@@ -6,22 +6,11 @@ import { openApiDocument } from './document';
 /**
  * The documentation routes: `GET /v1/openapi.json` and `GET /v1/docs`.
  *
- * ─────────────────────────────────────────────────────────────────────────────────────
- *  MOUNTING: this router is not mounted yet. One line is needed elsewhere.
- * ─────────────────────────────────────────────────────────────────────────────────────
- *
- * `src/routes/v1.ts` mounts the three feature routers under path prefixes and is owned by
- * another task in this build, so there is no seam this router can reach through and it
- * cannot mount itself. It needs one line added there:
- *
- *     router.use(openapiRouter);   // import { openapiRouter } from '../openapi/openapi.routes'
- *
- * Mounted without a prefix, because the two paths it serves are siblings of the feature
- * resources rather than children of one. Order is irrelevant: neither `/openapi.json` nor
- * `/docs` collides with a resource prefix.
- *
- * Everything below is exercised by openapi.routes.test.ts through a router mounted exactly
- * that way, so the mount is the only outstanding step rather than an untested one.
+ * Mounted by `src/routes/v1.ts` without a path prefix, because the two paths it serves are
+ * siblings of the feature resources rather than children of one. Order is irrelevant:
+ * neither `/openapi.json` nor `/docs` collides with a resource prefix. It does have to be
+ * mounted inside `createV1Router()` rather than onto the app afterwards, since `app.ts`
+ * registers `notFoundHandler` immediately after `/v1`.
  */
 export const openapiRouter = Router();
 

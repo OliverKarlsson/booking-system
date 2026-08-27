@@ -6,9 +6,9 @@ import { securityMiddleware } from '../middleware/security';
 import { openapiRouter } from './openapi.routes';
 
 /**
- * The router is not mounted by `routes/v1.ts` yet — that file belongs to another task and
- * needs a one-line addition. This suite mounts it exactly as that line will, under the
- * real security middleware, so the mount is the only unverified step.
+ * Mounts the router exactly as `routes/v1.ts` does — bare, with no path prefix — under the
+ * real security middleware, so this suite exercises the shipped configuration rather than
+ * a convenient approximation of it.
  *
  * `securityMiddleware()` is included on purpose rather than for realism's sake: helmet's
  * default CSP is aimed at HTML responses, and `/docs` is the one HTML response this API

@@ -3,7 +3,7 @@ import { ErrorBanner, Modal, Spinner } from '@/components/ui';
 import { useActiveModal, useBookingStore, useEditingId } from '@/store';
 import { useCreateRentalUnit, useRentalUnit, useUpdateRentalUnit } from './api';
 import { RentalUnitForm } from './RentalUnitForm';
-import { toErrorMessage } from './errorMessage';
+import { toErrorMessage } from '@/lib/errorMessage';
 import { buildRentalUnitPatch, emptyFormValues, formValuesFromUnit, toCreateInput } from './rentalUnitModel';
 import type { RentalUnitFormValues } from './rentalUnitModel';
 import { detectTimezone } from './timezones';

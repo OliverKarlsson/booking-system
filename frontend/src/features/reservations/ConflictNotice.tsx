@@ -1,6 +1,6 @@
 import type { ConflictingReservation } from '@/lib/apiClient';
 import { ErrorBanner } from '@/components/ui';
-import { conflictMessage, conflictTitle } from './conflict';
+import { conflictMessage, conflictTitle } from '@/lib/conflict';
 
 export interface ConflictNoticeProps {
   conflicts: ConflictingReservation[];

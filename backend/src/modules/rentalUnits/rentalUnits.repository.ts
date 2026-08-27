@@ -1,5 +1,6 @@
 import type { Address, RentalUnit, RentalUnitStatus } from '@booking/shared';
 
+import { toAddress } from '../../db/address';
 import { pool, type Queryable } from '../../db/pool';
 
 /**
@@ -7,9 +8,10 @@ import { pool, type Queryable } from '../../db/pool';
  *
  * Keeping queries confined to a repository module is what makes "swap `pg` for a query
  * builder later" a contained change rather than a grep across the codebase (see the FAQ's
- * ORM question). It also gives the `snake_case` → `camelCase` and flat-columns →
- * nested-`address` translation exactly one home, so no service or route ever sees a raw
- * row shape.
+ * ORM question). It also gives the `snake_case` → `camelCase` translation exactly one
+ * home, so no service or route ever sees a raw row shape. The flat-columns →
+ * nested-`address` half lives in `db/address.ts`, shared with the dashboard's read path
+ * so the two cannot disagree about what an absent address looks like.
  *
  * Every statement below is parameterised. There is no string interpolation into SQL
  * anywhere in this file — including `LIMIT`/`OFFSET`, which are bound like any other
@@ -38,28 +40,6 @@ interface RentalUnitRow {
  * schema and the mapper fail together, which is when a mismatch is cheapest to find.
  */
 const COLUMNS = `id, name, timezone, street, city, postcode, country, status, created_at, updated_at`;
-
-/**
- * The API nests the address (§3.2); the table stores it as four flat columns (§4).
- *
- * The columns are flat because a `jsonb` blob would make the fields unindexable in
- * practice and unavailable to a `CHECK`, for a value object whose shape is known and
- * fixed. That means the nesting is a presentation concern, and this is where it happens.
- *
- * An address with every column NULL is reported as *absent*, not as `{}`. That makes the
- * round trip faithful — a unit created without an address reads back without one — and
- * `address` is optional in the contract precisely so "not provided" is representable.
- */
-function toAddress(row: RentalUnitRow): Address | undefined {
-  const address: Address = {};
-
-  if (row.street !== null) address.street = row.street;
-  if (row.city !== null) address.city = row.city;
-  if (row.postcode !== null) address.postcode = row.postcode;
-  if (row.country !== null) address.country = row.country;
-
-  return Object.keys(address).length > 0 ? address : undefined;
-}
 
 /**
  * `created_at` / `updated_at` are `timestamptz`, so the driver hands back a JS `Date` —

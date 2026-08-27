@@ -1,14 +1,10 @@
 import { useCallback } from 'react';
 import { ErrorBanner, Modal, Spinner } from '@/components/ui';
 import { useActiveModal, useBookingStore, useEditingId, useReservationFilters } from '@/store';
-import {
-  useCreateReservation,
-  useRentalUnitOptions,
-  useReservation,
-  useUpdateReservation,
-} from './api';
+import { useRentalUnitOptions } from '@/features/rentalUnits/api';
+import { useCreateReservation, useReservation, useUpdateReservation } from './api';
 import { ReservationForm } from './ReservationForm';
-import { toConflicts, toErrorMessage } from './errorMessage';
+import { toConflicts, toErrorMessage } from '@/lib/errorMessage';
 import {
   buildReservationPatch,
   emptyFormValues,

@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useBookingStore } from '@/store';
 import { useRentalUnits } from './api';
 import { RentalUnitListView } from './RentalUnitListView';
-import { toErrorMessage } from './errorMessage';
+import { toErrorMessage } from '@/lib/errorMessage';
 
 /**
  * Fetches the rental unit list and hands it to the view.

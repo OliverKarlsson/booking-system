@@ -3,7 +3,6 @@ import type { UseMutationResult } from '@tanstack/react-query';
 import type {
   CreateReservationInput,
   Paginated,
-  RentalUnit,
   Reservation,
   UpdateReservationInput,
 } from '@booking/shared';
@@ -18,13 +17,9 @@ import type { ReservationQueryParams } from './reservationModel';
  */
 
 const RESERVATIONS_PATH = '/reservations';
-const RENTAL_UNITS_PATH = '/rental-units';
 
 /** Ten rows fit the list without scrolling; the API's own default is 20 (§3.5). */
 export const RESERVATIONS_PAGE_SIZE = 10;
-
-/** §3.5 caps `limit` at 100. The unit picker wants them all, so it asks for the cap. */
-const RENTAL_UNIT_OPTIONS_LIMIT = 100;
 
 export function useReservations(params: ReservationQueryParams, enabled = true) {
   return useQuery({
@@ -43,26 +38,6 @@ export function useReservation(id: string | undefined) {
     queryKey: queryKeys.reservations.detail(id ?? ''),
     queryFn: ({ signal }) => apiClient.get<Reservation>(`${RESERVATIONS_PATH}/${id}`, { signal }),
     enabled: Boolean(id),
-  });
-}
-
-/**
- * The rental units, for the filter bar's picker and the create form's required
- * `rentalUnitId`.
- *
- * Fetched here rather than imported from `features/rentalUnits/api.ts` so the two feature
- * modules stay independently ownable — but it is keyed under `queryKeys.rentalUnits`, so
- * the two hooks share one cache entry whenever their parameters match and a unit write
- * invalidates both. The overlap with `useRentalUnits` is a known, deliberate duplication
- * for Wave 4 to dedupe; what would *not* be safe is a second cache key for the same data.
- */
-export function useRentalUnitOptions() {
-  const query = { page: 1, limit: RENTAL_UNIT_OPTIONS_LIMIT } as const;
-
-  return useQuery({
-    queryKey: queryKeys.rentalUnits.list(query),
-    queryFn: ({ signal }) =>
-      apiClient.get<Paginated<RentalUnit>>(RENTAL_UNITS_PATH, { query: { ...query }, signal }),
   });
 }
 

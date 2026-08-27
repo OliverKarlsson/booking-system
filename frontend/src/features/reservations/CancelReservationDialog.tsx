@@ -3,7 +3,7 @@ import { Button, ErrorBanner, Modal, Spinner } from '@/components/ui';
 import { formatDateRange } from '@/lib/formatDate';
 import { useActiveModal, useBookingStore, useEditingId } from '@/store';
 import { useCancelReservation, useReservation } from './api';
-import { toErrorMessage } from './errorMessage';
+import { toErrorMessage } from '@/lib/errorMessage';
 
 /**
  * Confirmation before cancelling a booking.

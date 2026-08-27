@@ -1,7 +1,7 @@
 import { useNavigate } from 'react-router-dom';
 import { useDashboard } from './api';
 import { DashboardListView } from './DashboardListView';
-import { toErrorMessage } from './errorMessage';
+import { toErrorMessage } from '@/lib/errorMessage';
 
 /**
  * Fetches occupancy and hands it to the view.

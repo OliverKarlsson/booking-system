@@ -1,5 +1,9 @@
-import { isApiError, isBookingConflict, isValidationError } from '@/lib/apiClient';
-import type { ConflictingReservation } from '@/lib/apiClient';
+import {
+  isApiError,
+  isBookingConflict,
+  isValidationError,
+  type ConflictingReservation,
+} from './apiClient';
 import { conflictMessage } from './conflict';
 
 /**
@@ -7,16 +11,19 @@ import { conflictMessage } from './conflict';
  *
  * `ApiError.message` is already the server's human-readable `error` string from the §3.4
  * envelope, so it is used as-is; the branches below only add what the envelope keeps in
- * `details` and the generic fallback for a non-`ApiError`.
+ * `details`, plus the generic fallback for a non-`ApiError` (a rendering bug, never a
+ * response).
  *
- * Deliberately a copy of `features/rentalUnits/errorMessage.ts` rather than an import
- * across feature directories — one more Wave 4 dedupe candidate. The addition here is the
- * conflict branch, so that a `BOOKING_CONFLICT` surfacing anywhere *other* than the form
- * still names the blocking booking instead of degrading to the server's generic
- * "Reservation overlaps an existing booking".
+ * This lives in `lib/` beside `apiClient` because it is the envelope's counterpart:
+ * `apiClient` turns a response into a typed `ApiError`, and this turns that `ApiError`
+ * back into a sentence. Every feature needs the same mapping, so a per-feature copy would
+ * only be three chances to drift.
  */
 export function toErrorMessage(error: unknown, fallback = 'Something went wrong.'): string {
   if (isBookingConflict(error)) {
+    // A 409 reaching a banner rather than the reservation form's `ConflictNotice` still
+    // has to name the blocking booking, otherwise it degrades to the server's generic
+    // "Reservation overlaps an existing booking" and the user cannot act on it.
     return error.details.map(conflictMessage).join('; ');
   }
   if (isValidationError(error) && error.details.length > 0) {

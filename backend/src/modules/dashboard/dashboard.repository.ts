@@ -1,5 +1,6 @@
-import type { Address, DashboardEntry, ReservationSummary } from '@booking/shared';
+import type { DashboardEntry, ReservationSummary } from '@booking/shared';
 
+import { toAddress } from '../../db/address';
 import type { Queryable } from '../../db/pool';
 
 /**
@@ -122,23 +123,6 @@ const DASHBOARD_SQL = `
   WHERE ru.status = 'active'
   ORDER BY ru.name, ru.id
 `;
-
-/**
- * The four address columns are stored flat and exposed nested (§3.2).
- *
- * A unit with nothing filled in gets no `address` key at all rather than an empty
- * object: `address` is optional in the contract, and `{}` would make a client's
- * `if (unit.address)` check true for a unit that has no address.
- */
-function toAddress(row: DashboardRow): Address | undefined {
-  const address: Address = {};
-  if (row.street !== null) address.street = row.street;
-  if (row.city !== null) address.city = row.city;
-  if (row.postcode !== null) address.postcode = row.postcode;
-  if (row.country !== null) address.country = row.country;
-
-  return Object.keys(address).length > 0 ? address : undefined;
-}
 
 /**
  * The left-joined columns are all-or-nothing: either the subquery matched a row and every

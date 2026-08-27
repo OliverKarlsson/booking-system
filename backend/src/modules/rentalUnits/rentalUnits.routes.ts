@@ -1,4 +1,4 @@
-import { Router, type NextFunction, type Request, type RequestHandler, type Response } from 'express';
+import { Router } from 'express';
 import {
   createRentalUnitSchema,
   paginationQuerySchema,
@@ -10,6 +10,7 @@ import {
 } from '@booking/shared';
 import { z } from 'zod';
 
+import { asyncHandler } from '../../middleware/asyncHandler';
 import { validate, validateBody, validateQuery } from '../../middleware/validate';
 import { rentalUnitsService } from './rentalUnits.service';
 
@@ -24,23 +25,6 @@ import { rentalUnitsService } from './rentalUnits.service';
  * Do not rename the export: `v1.ts` imports it by name and is owned by another task.
  */
 export const rentalUnitsRouter = Router();
-
-/**
- * Express 4 does not await handlers, so a rejected promise from an `async` route is an
- * unhandled rejection that hangs the request until the client times out — the error
- * middleware is never reached. This adapter forwards the rejection to `next()`.
- *
- * (Express 5 does this natively. It is kept local to this module rather than added to
- * `middleware/` because that directory belongs to another task in this build; hoisting it
- * to a shared helper is a Wave 4 cleanup, not a behaviour change.)
- */
-function asyncHandler(
-  handler: (req: Request, res: Response) => Promise<void>,
-): RequestHandler {
-  return (req: Request, res: Response, next: NextFunction): void => {
-    handler(req, res).catch(next);
-  };
-}
 
 /**
  * A malformed id is a 400, not a 404.

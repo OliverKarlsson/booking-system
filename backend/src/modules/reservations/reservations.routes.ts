@@ -1,4 +1,4 @@
-import { Router, type NextFunction, type Request, type RequestHandler, type Response } from 'express';
+import { Router } from 'express';
 import {
   createReservationSchema,
   reservationQuerySchema,
@@ -10,6 +10,7 @@ import {
 } from '@booking/shared';
 import { z } from 'zod';
 
+import { asyncHandler } from '../../middleware/asyncHandler';
 import { validate } from '../../middleware/validate';
 import * as service from './reservations.service';
 
@@ -25,24 +26,6 @@ import * as service from './reservations.service';
  * constraint in db/schema.sql. See the header comment in reservations.service.ts.
  */
 export const reservationsRouter = Router();
-
-/**
- * Express 4 does not catch rejected promises from a handler: an async function that
- * throws leaves the request hanging until it times out, with no error middleware run and
- * no log line. This wrapper forwards the rejection to `next` so every async route lands
- * in `errorHandler` like a synchronous throw would.
- *
- * Local to this module because Wave 2 owns no shared middleware; it is a natural
- * candidate to hoist into `src/middleware/` during integration if another module grows
- * its own copy. (Express 5 makes it unnecessary entirely.)
- */
-function asyncHandler(
-  handler: (req: Request, res: Response) => Promise<void>,
-): RequestHandler {
-  return (req: Request, res: Response, next: NextFunction): void => {
-    handler(req, res).catch(next);
-  };
-}
 
 /** A malformed id is a bad request, not a missing resource — it could never identify one. */
 const idParamsSchema = z.object({ id: uuidSchema });

@@ -1,6 +1,7 @@
 import { dashboardQuerySchema, type DashboardQuery } from '@booking/shared';
-import { Router, type NextFunction, type Request, type Response } from 'express';
+import { Router } from 'express';
 
+import { asyncHandler } from '../../middleware/asyncHandler';
 import { validateQuery } from '../../middleware/validate';
 import { getDashboard } from './dashboard.service';
 
@@ -36,16 +37,10 @@ export const dashboardRouter = Router();
 dashboardRouter.get(
   '/',
   validateQuery(dashboardQuerySchema),
-  async (req: Request, res: Response, next: NextFunction): Promise<void> => {
-    try {
-      // Safe by construction: `validateQuery` writes the parsed value back onto
-      // `req.query`, so this is the schema's output type, not the raw string map.
-      const { now } = req.query as unknown as DashboardQuery;
-      res.status(200).json(await getDashboard({ now }));
-    } catch (err) {
-      // Express 4 does not catch rejections from async handlers — an unforwarded one
-      // hangs the request until it times out instead of producing a 500.
-      next(err);
-    }
-  },
+  asyncHandler(async (req, res) => {
+    // Safe by construction: `validateQuery` writes the parsed value back onto
+    // `req.query`, so this is the schema's output type, not the raw string map.
+    const { now } = req.query as unknown as DashboardQuery;
+    res.status(200).json(await getDashboard({ now }));
+  }),
 );

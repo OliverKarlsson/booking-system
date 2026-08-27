@@ -7,7 +7,7 @@ import { useBookingStore } from '@/store';
 import { useDeleteRentalUnit, useRentalUnit, useRentalUnitReservations } from './api';
 import { RentalUnitDetailView } from './RentalUnitDetailView';
 import { RentalUnitReservationsView } from './RentalUnitReservationsView';
-import { toErrorMessage } from './errorMessage';
+import { toErrorMessage } from '@/lib/errorMessage';
 
 export interface RentalUnitDetailProps {
   id: string;

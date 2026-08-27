@@ -23,6 +23,9 @@ const RESERVATIONS_PATH = '/reservations';
 export const RENTAL_UNITS_PAGE_SIZE = 10;
 export const UNIT_RESERVATIONS_PAGE_SIZE = 10;
 
+/** §3.5 caps `limit` at 100. A picker wants them all, so it asks for the cap. */
+const RENTAL_UNIT_OPTIONS_LIMIT = 100;
+
 export function useRentalUnits(page = 1, limit = RENTAL_UNITS_PAGE_SIZE) {
   return useQuery({
     queryKey: queryKeys.rentalUnits.list({ page, limit }),
@@ -32,6 +35,22 @@ export function useRentalUnits(page = 1, limit = RENTAL_UNITS_PAGE_SIZE) {
     // list unmounts into a spinner on every click, which reads as the page breaking.
     placeholderData: keepPreviousData,
   });
+}
+
+/**
+ * Every rental unit, for a picker — the reservation filter bar's unit selector and the
+ * create form's required `rentalUnitId`.
+ *
+ * A named wrapper rather than a second hook: it is the same request against the same
+ * cache key as `useRentalUnits(1, 100)`, so the picker and the unit list share one cache
+ * entry and one invalidation. A parallel implementation would have been a second key for
+ * identical data, which is how a stale picker survives a successful unit write.
+ *
+ * The name is kept because the call sites are asking for options, not for page one — and
+ * "give me the picker's units" is the thing that should be stable if the cap ever moves.
+ */
+export function useRentalUnitOptions() {
+  return useRentalUnits(1, RENTAL_UNIT_OPTIONS_LIMIT);
 }
 
 export function useRentalUnit(id: string | undefined) {

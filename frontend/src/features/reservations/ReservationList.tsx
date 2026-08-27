@@ -1,8 +1,9 @@
 import { useBookingStore, useReservationFilters } from '@/store';
-import { RESERVATIONS_PAGE_SIZE, useRentalUnitOptions, useReservations } from './api';
+import { useRentalUnitOptions } from '@/features/rentalUnits/api';
+import { RESERVATIONS_PAGE_SIZE, useReservations } from './api';
 import { ReservationFilterBar } from './ReservationFilterBar';
 import { ReservationListView } from './ReservationListView';
-import { toErrorMessage } from './errorMessage';
+import { toErrorMessage } from '@/lib/errorMessage';
 import {
   dateRangeError,
   toRentalUnitOptions,
