@@ -107,23 +107,23 @@ dashboard has meaningful data immediately. The browser only ever talks to the `w
 service, which serves the built SPA and reverse-proxies `/v1` to the API, so everything is
 one origin and CORS is never on the critical path.
 
-> **Verification status — please read.** `docker compose up` itself was **not executed on
-> the development machine**: it has no `docker` binary and no Compose provider (bare
-> `podman` only). What *was* verified, and how:
+> **Verified.** `compose up -d --build` was run from a clean slate (`down -v`, so an empty
+> volume and no cached database) and the whole stack came up: the healthcheck gate held the
+> API back until Postgres reported healthy, the API migrated and seeded on boot, nginx
+> served the SPA and its deep-link fallbacks and proxied `/v1`, and a booking conflict
+> returned a 409 naming the blocking guest through the proxy. Same-day turnover was
+> accepted, `/v1/docs` rendered, and the seeded units reported occupancy against their own
+> local dates — Tokyo and Auckland a calendar day ahead of the rest at the same instant.
 >
-> - **Both image build stages**, reproduced step-by-step in a clean directory — `npm
->   install` and both workspace builds run exactly as the images would. This found and
->   fixed three build-breaking bugs.
-> - **The `web` container, run for real** under podman against a stub upstream: nginx
->   starts with no API present, serves the SPA and its deep-link fallbacks, and forwards
->   `/v1` paths and query strings to the API intact. This found and fixed two more bugs.
-> - **The API**, by running the compiled build against a real Postgres and exercising every
->   endpoint with `curl`.
+> Getting there found five real bugs, listed under
+> [Known gaps](#known-gaps-and-honest-limitations). Four of them only appear in a container:
+> the compiled image booted to an empty dashboard, and the web container would not start at
+> all. None were visible from the tests, which is the point of having run it.
 >
-> What remains genuinely unproven is the three services being brought up *together* by
-> Compose — service startup ordering, the healthcheck gate, and the compose network itself.
-> See [Known gaps](#known-gaps-and-honest-limitations). I would rather state that than
-> imply the whole path was tested.
+> One caveat worth stating: this was verified against **Podman** driving the Compose file,
+> not Docker Engine. The two differ where it matters here — Docker's embedded DNS is
+> `127.0.0.11` and Podman's is not — which is why the nginx config reads the resolver from
+> the container rather than hardcoding either.
 
 ### Running it without Docker
 
@@ -376,9 +376,9 @@ unchanged — that is what catches an accidental `new Date()` creeping into a fo
 
 ## Known gaps and honest limitations
 
-**Compose has not brought the three services up together.** See the note under
-[Quickstart](#quickstart) for what was verified instead. Doing that verification the hard
-way surfaced five genuine bugs, all fixed and re-verified.
+**Bugs found by actually running the containers.** Six, all fixed and re-verified. Worth
+listing because none of them were visible from the test suite — the application code was
+correct in every case, and the failures lived entirely in packaging.
 
 Reproducing the image build stages by hand in a clean tree found three:
 
@@ -409,6 +409,17 @@ is not, so the config ships as an nginx *template* using `${NGINX_LOCAL_RESOLVER
 from the container's own `/etc/resolv.conf`. That mechanism is opt-in behind
 `NGINX_ENTRYPOINT_LOCAL_RESOLVERS`, which the Dockerfile sets — without it the placeholder
 reaches nginx unsubstituted and the container dies at boot.
+
+And running the full `compose up` found a sixth, which is the one most likely to have hit
+whoever tried this first. The build-context excludes were named
+`backend/Dockerfile.dockerignore` and `frontend/Dockerfile.dockerignore`, and that
+per-Dockerfile convention is **BuildKit-specific**: Podman/Buildah, and Docker with
+BuildKit disabled, read only `/.dockerignore` at the context root. There wasn't one, so the
+entire repository was being sent as build context — including ~225 MB and ~15 000 files of
+`node_modules`. There is no error for this. `load build context` simply sits there, and two
+builds were abandoned as "slow" before the cause was found. A root `.dockerignore` now
+covers every builder; the per-Dockerfile files remain as a BuildKit optimisation that also
+drops the other workspace.
 
 Also worth stating plainly:
 

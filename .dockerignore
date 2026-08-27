@@ -1,0 +1,52 @@
+# Build-context excludes for BOTH images. Both build from the repository root, because
+# each workspace imports @booking/shared through the root npm workspace link.
+#
+# This file exists in addition to the per-Dockerfile `backend/Dockerfile.dockerignore` and
+# `frontend/Dockerfile.dockerignore`, and it is the one that actually protects you:
+#
+#   - BuildKit prefers `<dockerfile-path>.dockerignore` when present and ignores this file.
+#   - Every other builder — Podman/Buildah, and Docker with BuildKit disabled — looks only
+#     for `.dockerignore` at the context root, and silently sends everything when it is
+#     absent.
+#
+# "Silently" is the problem. With no root ignore file, `node_modules` alone is ~225 MB and
+# ~15k files; pushing that across the Windows→WSL boundary makes `load build context` look
+# like a hang rather than an error, with no message saying why. That is exactly how it
+# presented before this file existed.
+#
+# So keep the rules here a superset-safe baseline. The per-Dockerfile files may exclude
+# more (each drops the other workspace), never less.
+
+# Dependencies — reinstalled inside the image, and by far the largest thing here.
+node_modules
+**/node_modules
+
+# Build output — regenerated in the image; a stale host build must never leak in.
+**/dist
+storybook-static
+**/storybook-static
+
+# Version control and tooling state
+**/.git
+.git
+.github
+.claude
+.vscode
+
+# Local environment. The example is kept: it is documentation, not a secret.
+**/.env
+**/.env.*
+!**/.env.example
+
+# Test and log noise
+**/coverage
+**/*.log
+**/.vitest
+**/.vite
+
+# Repository documentation that no image needs
+planning
+scripts/local
+
+# Stray host artefacts
+*.exe

@@ -1,7 +1,15 @@
 # Named `Dockerfile.dockerignore` rather than `.dockerignore`: the build context is the
-# repository root, so a `frontend/.dockerignore` would be ignored entirely. BuildKit (which
-# Compose v2 uses by default) looks for `<dockerfile-path>.dockerignore` first, which keeps
-# this rule set next to the Dockerfile it belongs to.
+# repository root, so a `frontend/.dockerignore` would be ignored entirely.
+#
+# This is an OPTIMISATION, not the safety net. `<dockerfile-path>.dockerignore` is a
+# BuildKit convention — Podman/Buildah and BuildKit-disabled Docker do not read it, and
+# fall back to `/.dockerignore` at the context root. That root file is what guarantees
+# `node_modules` is excluded on every runtime; this one exists so a BuildKit build can also
+# skip the other workspace.
+#
+# Keep this a SUPERSET of the root file. Anything dropped from here that the root file also
+# omits will be silently included under BuildKit.
+#
 # Paths below are relative to the repository root.
 node_modules
 **/node_modules
