@@ -1,0 +1,66 @@
+# Serves the built SPA and proxies the API onto the same origin.
+#
+# One origin is the point. `lib/apiClient.ts` leaves its base URL empty and calls `/v1/...`
+# relative, which works in dev because the Vite dev server proxies `/v1`, and works here
+# because this block does. The alternative — pointing the browser straight at
+# `http://localhost:5006` — would make every request cross-origin and put CORS on the
+# critical path of the demo, for no benefit.
+
+server {
+    listen 80;
+    server_name _;
+
+    root /usr/share/nginx/html;
+    index index.html;
+
+    # `api` is the compose service name and the port is the container's, not the published
+    # one.
+    #
+    # The upstream is reached through a variable deliberately. With a literal
+    # `proxy_pass http://api:5006;`, nginx resolves the name once while *parsing* the
+    # config and aborts with "host not found in upstream" if it does not answer — so a web
+    # container that restarts while the API is down never comes back, and the UI is gone
+    # rather than merely unable to reach the API. Verified: `nginx -t` fails outright on
+    # the literal form when the name does not resolve.
+    #
+    # A variable defers resolution to request time, which is what makes `depends_on: api`
+    # (ordering only, no health gate) safe: the SPA serves immediately and API calls start
+    # succeeding once the API is up. `valid=10s` also means a recreated API container's new
+    # address is picked up instead of cached forever.
+    #
+    # The resolver address is NOT hardcoded. Docker's embedded DNS is 127.0.0.11, but
+    # Podman's is not (10.89.x.1 here), and hardcoding either makes the image work on one
+    # runtime and 502 on the other. ${NGINX_LOCAL_RESOLVERS} is set from the container's
+    # own /etc/resolv.conf by the official image's 15-local-resolvers.envsh, which is why
+    # this file ships as a template in /etc/nginx/templates/ — the entrypoint substitutes
+    # it at boot. Substitution is restricted to names that exist in the environment, so
+    # nginx's own $host / $request_uri / $api_upstream survive untouched.
+    location /v1/ {
+        resolver ${NGINX_LOCAL_RESOLVERS} ipv6=off valid=10s;
+        set $api_upstream api:5006;
+
+        # $request_uri carries the full original path and query, so the /v1 prefix reaches
+        # the API intact — it is part of the API's own contract, not a routing artefact.
+        proxy_pass http://$api_upstream$request_uri;
+        proxy_http_version 1.1;
+        proxy_set_header Host              $host;
+        proxy_set_header X-Real-IP         $remote_addr;
+        proxy_set_header X-Forwarded-For   $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+
+    # Client-side routing: react-router owns /units, /units/:id and /reservations, and the
+    # server has no file at those paths. Without this fallback a page refresh — or a pasted
+    # link — 404s on every route except `/`.
+    location / {
+        try_files $uri $uri/ /index.html;
+    }
+
+    # Vite emits content-hashed asset filenames, so a given URL's contents can never
+    # change. index.html must not be cached the same way or a deploy would keep serving
+    # the previous bundle's script tags.
+    location /assets/ {
+        expires 1y;
+        add_header Cache-Control "public, immutable";
+    }
+}

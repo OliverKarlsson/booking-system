@@ -107,15 +107,23 @@ dashboard has meaningful data immediately. The browser only ever talks to the `w
 service, which serves the built SPA and reverse-proxies `/v1` to the API, so everything is
 one origin and CORS is never on the critical path.
 
-> **Verification status — please read.** `docker compose up` was **not executed on the
-> development machine**: it has no `docker` binary and no Compose provider (bare `podman`
-> only). The compose file, both Dockerfiles, and the nginx config were reviewed by eye and
-> their build stages were reproduced step-by-step in a clean directory — `npm install` and
-> both workspace builds run exactly as the images would, and that process found and fixed
-> three real build-breaking bugs (see [Known gaps](#known-gaps-and-honest-limitations)).
-> Everything else below was verified by running the compiled API against a real Postgres
-> and exercising the endpoints with `curl`. **The container build itself is unrun**, and I
-> would rather say so than imply otherwise.
+> **Verification status — please read.** `docker compose up` itself was **not executed on
+> the development machine**: it has no `docker` binary and no Compose provider (bare
+> `podman` only). What *was* verified, and how:
+>
+> - **Both image build stages**, reproduced step-by-step in a clean directory — `npm
+>   install` and both workspace builds run exactly as the images would. This found and
+>   fixed three build-breaking bugs.
+> - **The `web` container, run for real** under podman against a stub upstream: nginx
+>   starts with no API present, serves the SPA and its deep-link fallbacks, and forwards
+>   `/v1` paths and query strings to the API intact. This found and fixed two more bugs.
+> - **The API**, by running the compiled build against a real Postgres and exercising every
+>   endpoint with `curl`.
+>
+> What remains genuinely unproven is the three services being brought up *together* by
+> Compose — service startup ordering, the healthcheck gate, and the compose network itself.
+> See [Known gaps](#known-gaps-and-honest-limitations). I would rather state that than
+> imply the whole path was tested.
 
 ### Running it without Docker
 
@@ -368,9 +376,11 @@ unchanged — that is what catches an accidental `new Date()` creeping into a fo
 
 ## Known gaps and honest limitations
 
-**The container build has not been run.** See the note under [Quickstart](#quickstart).
-Reproducing the image build stages by hand in a clean tree did surface three genuine
-bugs, all now fixed and re-verified the same way:
+**Compose has not brought the three services up together.** See the note under
+[Quickstart](#quickstart) for what was verified instead. Doing that verification the hard
+way surfaced five genuine bugs, all fixed and re-verified.
+
+Reproducing the image build stages by hand in a clean tree found three:
 
 1. `npm install` failed in the image because `@booking/shared`'s `prepare` script compiles
    the package, and only its `package.json` had been copied at that point. (`--ignore-scripts`
@@ -382,11 +392,23 @@ bugs, all now fixed and re-verified the same way:
    symlinked workspace path does not match. Dev and Vitest transform on demand and never
    hit it, so the failure appeared only in a production build.
 
-A fourth bug was found by running the compiled server: the boot-time seed was loaded
-through a dynamic `import()` of an extensionless specifier, which under CommonJS output
-goes through Node's ESM resolver, throws `ERR_MODULE_NOT_FOUND`, and was swallowed by a
-`catch`. The compiled image booted with an empty dashboard while `tsx` and Vitest seeded
-correctly. It is now a static import, so a broken path is a compile error.
+Running the compiled server found a fourth: the boot-time seed was loaded through a
+dynamic `import()` of an extensionless specifier, which under CommonJS output goes through
+Node's ESM resolver, throws `ERR_MODULE_NOT_FOUND`, and was swallowed by a `catch`. The
+compiled image booted with an empty dashboard while `tsx` and Vitest seeded correctly. It
+is now a static import, so a broken path is a compile error.
+
+Running the `web` container for real found a fifth, which was really two:
+`proxy_pass http://api:5006;` with a literal hostname makes nginx resolve the name while
+*parsing* its config and abort with `host not found in upstream` — so the UI container
+would fail to start whenever the API was not already resolvable, and `depends_on` without
+a health gate was not the safe choice its comment claimed. Reaching the upstream through a
+variable plus a `resolver` defers DNS to request time and fixes it. The resolver address
+itself then cannot be hardcoded either: Docker's embedded DNS is `127.0.0.11` and Podman's
+is not, so the config ships as an nginx *template* using `${NGINX_LOCAL_RESOLVERS}`, taken
+from the container's own `/etc/resolv.conf`. That mechanism is opt-in behind
+`NGINX_ENTRYPOINT_LOCAL_RESOLVERS`, which the Dockerfile sets — without it the placeholder
+reaches nginx unsubstituted and the container dies at boot.
 
 Also worth stating plainly:
 

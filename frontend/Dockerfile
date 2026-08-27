@@ -30,6 +30,20 @@ RUN npm run build --workspace @booking/frontend
 FROM nginx:1.27-alpine AS runtime
 
 COPY --from=build /app/frontend/dist /usr/share/nginx/html
-COPY frontend/nginx.conf /etc/nginx/conf.d/default.conf
+
+# Opt-in flag for the image's own 15-local-resolvers.envsh, which otherwise returns
+# early and does nothing:
+#
+#   [ "${NGINX_ENTRYPOINT_LOCAL_RESOLVERS:-}" ] || return 0
+#
+# Without it NGINX_LOCAL_RESOLVERS is never set, envsubst leaves the placeholder in
+# place, and nginx dies at boot with: host not found in resolver
+# "${NGINX_LOCAL_RESOLVERS}". Set here rather than in compose so the image works standalone.
+ENV NGINX_ENTRYPOINT_LOCAL_RESOLVERS=1
+
+# Into templates/, not conf.d/: the entrypoint runs envsubst over this directory at boot,
+# which is how ${NGINX_LOCAL_RESOLVERS} becomes the container's real DNS server. Copied
+# straight to conf.d/ it would reach nginx with the placeholder unsubstituted.
+COPY frontend/default.conf.template /etc/nginx/templates/default.conf.template
 
 EXPOSE 80

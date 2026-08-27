@@ -68,8 +68,8 @@ services:
 
   web:
     # nginx serving the built SPA and reverse-proxying /v1 to `api`, so the browser only
-    # ever talks to one origin (see frontend/nginx.conf). This is why apiClient's base URL
-    # is empty and every request is relative.
+    # ever talks to one origin (see frontend/default.conf.template). This is why
+    # apiClient's base URL is empty and every request is relative.
     build:
       # Repository root again: the app imports @booking/shared for its Zod form schemas.
       context: .
@@ -77,10 +77,15 @@ services:
     ports:
       - '8080:80'
     depends_on:
-      # Ordering only, deliberately not `service_healthy`: nginx resolves `api` lazily, per
-      # request, so the static app can serve immediately and the first API call succeeds as
-      # soon as the API is up. Gating the whole UI on the API's readiness would make a slow
-      # migration look like a broken frontend.
+      # Ordering only, deliberately not `service_healthy`, so the static app serves
+      # immediately and API calls start succeeding once the API is up — gating the whole UI
+      # on the API's readiness would make a slow migration look like a broken frontend.
+      #
+      # This is only safe because the nginx config reaches the upstream through a variable
+      # plus a `resolver`, which defers DNS to request time. With a literal
+      # `proxy_pass http://api:5006;` nginx resolves while parsing its config and refuses
+      # to start at all if the name does not answer — verified, and the reason the config
+      # is written the way it is.
       - api
 
 volumes:
