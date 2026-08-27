@@ -151,3 +151,7 @@ storybook-static/
 # Installers and other large binaries occasionally downloaded into the repo root by
 # mistake. A Node project has no business tracking an executable.
 *.exe
+
+# Home assignment brief (personal, not part of the project deliverable)
+planning/Home Assignment_ The Booking System.md
+planning/Home Assignment_ The Booking System.pdf
