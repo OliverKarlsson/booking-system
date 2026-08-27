@@ -191,7 +191,7 @@ export async function runSeed(options: RunSeedOptions = {}): Promise<SeedOutcome
 }
 
 /**
- * The boot-time entry point, resolved by `server.ts` through a dynamic import.
+ * The boot-time entry point, called by `server.ts`.
  *
  * `SEED_ON_STARTUP` is re-checked here even though `server.ts` already checks it. That is
  * not redundancy for its own sake: this function is the one any future caller will reach

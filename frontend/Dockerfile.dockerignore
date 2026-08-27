@@ -1,0 +1,18 @@
+# Named `Dockerfile.dockerignore` rather than `.dockerignore`: the build context is the
+# repository root, so a `frontend/.dockerignore` would be ignored entirely. BuildKit (which
+# Compose v2 uses by default) looks for `<dockerfile-path>.dockerignore` first, which keeps
+# this rule set next to the Dockerfile it belongs to.
+# Paths below are relative to the repository root.
+node_modules
+**/node_modules
+**/dist
+**/.git
+**/*.log
+**/.env
+**/.env.*
+!**/.env.example
+**/coverage
+planning
+scripts/local
+backend
+.claude

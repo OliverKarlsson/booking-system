@@ -1,4 +1,11 @@
-# One-command startup for the stack: `docker compose up`.
+# One-command startup for the whole stack: `docker compose up`.
+#
+#   web  → nginx on http://localhost:8080 — the UI, and the reverse proxy for /v1
+#   api  → Express on http://localhost:5006 — migrates and seeds on boot
+#   db   → postgres:16-alpine on localhost:5433
+#
+# The browser only ever talks to `web`, which proxies /v1 to `api` so everything is one
+# origin. `api`'s port is published anyway, for curl and /v1/docs.
 #
 # This replaces the scaffolded MongoDB compose file (see FAQ, "MongoDB or switch to a
 # relational database?"). The booking rule is an overlap *constraint*, and Postgres can
@@ -42,8 +49,15 @@ services:
       NODE_ENV: production
       PORT: 5006
       DATABASE_URL: postgres://booking:booking@db:5432/booking
-      CORS_ORIGIN: http://localhost:5173
+      # The browser reaches the API through the `web` service's reverse proxy, on the same
+      # origin, so no cross-origin request is made in the compose setup at all. The
+      # allow-list covers the other way to run the client — `npm run dev` on 5173 against
+      # the published API port — which proxies server-side and so is also same-origin, but
+      # a direct call to :5006 from that page would not be.
+      CORS_ORIGIN: http://localhost:5173,http://localhost:8080
     ports:
+      # Published so the API can be curl'd and `/v1/docs` opened directly. The frontend
+      # container does not use this mapping; it talks to `api:5006` on the compose network.
       - '5006:5006'
     depends_on:
       db:
@@ -51,6 +65,23 @@ services:
         # genuinely accepting connections. `depends_on` without a condition only waits
         # for the container to be *created*, which is the classic version of this bug.
         condition: service_healthy
+
+  web:
+    # nginx serving the built SPA and reverse-proxying /v1 to `api`, so the browser only
+    # ever talks to one origin (see frontend/nginx.conf). This is why apiClient's base URL
+    # is empty and every request is relative.
+    build:
+      # Repository root again: the app imports @booking/shared for its Zod form schemas.
+      context: .
+      dockerfile: frontend/Dockerfile
+    ports:
+      - '8080:80'
+    depends_on:
+      # Ordering only, deliberately not `service_healthy`: nginx resolves `api` lazily, per
+      # request, so the static app can serve immediately and the first API call succeeds as
+      # soon as the API is up. Gating the whole UI on the API's readiness would make a slow
+      # migration look like a broken frontend.
+      - api
 
 volumes:
   postgres-data:

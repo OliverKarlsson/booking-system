@@ -4,40 +4,7 @@ import { createApp } from './app';
 import { env } from './config/env';
 import { migrate } from './db/migrate';
 import { closePool } from './db/pool';
-
-/**
- * Seed data is owned by T3.4 (`src/seed/**`), which does not exist yet.
- *
- * It is loaded through a non-literal specifier so TypeScript does not try to resolve the
- * module at compile time and a missing seed module is simply a no-op. The alternative
- * would be for that task to edit this file, which is exactly the cross-file collision
- * Wave 1 exists to pre-empt.
- */
-async function runSeedIfPresent(): Promise<void> {
-  if (!env.SEED_ON_STARTUP) return;
-
-  const candidates = ['./seed/seed', './seed/index'];
-
-  for (const specifier of candidates) {
-    let mod: Record<string, unknown>;
-    try {
-      mod = (await import(specifier)) as Record<string, unknown>;
-    } catch {
-      continue;
-    }
-
-    const seedFn = (mod.seedIfEmpty ?? mod.seed ?? mod.default) as
-      | (() => Promise<void>)
-      | undefined;
-
-    if (typeof seedFn === 'function') {
-      await seedFn();
-      return;
-    }
-  }
-
-  console.info('[seed] no seed module present, skipping');
-}
+import { seedIfEmpty } from './seed/seed';
 
 /**
  * Shutdown order matters: stop accepting connections, let in-flight requests drain, then
@@ -73,7 +40,18 @@ async function main(): Promise<void> {
   // Before listening: an instance that accepts traffic against a schema-less database
   // would serve 500s for however long the migration takes.
   await migrate();
-  await runSeedIfPresent();
+
+  // A static import, deliberately. This was a dynamic `import(specifier)` guarded by a
+  // try/catch while `src/seed/**` was still an unwritten task — and that shape had a
+  // failure mode worth recording: under CommonJS output, a dynamic import of an
+  // extensionless relative specifier goes through Node's *ESM* resolver, which does not
+  // guess extensions. It threw ERR_MODULE_NOT_FOUND, the catch swallowed it, and the
+  // compiled image booted with an empty database while `tsx` and Vitest — which transform
+  // the call — seeded correctly. Nothing failed; the dashboard was simply blank.
+  //
+  // Now that the module exists, importing it normally makes that unrepresentable: a broken
+  // path is a compile error rather than a silent skip.
+  await seedIfEmpty();
 
   const app = createApp();
   const server = app.listen(env.PORT, () => {
