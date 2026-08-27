@@ -144,3 +144,10 @@ frontend/dist/
 .vitest/
 .vite/
 node_modules/.vite/
+
+# Storybook build output
+storybook-static/
+
+# Installers and other large binaries occasionally downloaded into the repo root by
+# mistake. A Node project has no business tracking an executable.
+*.exe
